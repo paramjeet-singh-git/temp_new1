@@ -1,0 +1,191 @@
+
+-----------------------monty hall-------------------------
+# Monty Hall Game in Python
+import random
+
+def play_monty_hall(choice):
+    # Prizes behind the door
+    # initial ordering doesn't matter
+    prizes = ['goat', 'car', 'goat']
+    
+    # Randomizing the prizes
+    random.shuffle(prizes) 
+    
+    # Determining door without car to open
+    while True:
+        opening_door = random.randrange(len(prizes))
+        if prizes[opening_door] != 'car' and choice-1 != opening_door:
+            break
+    
+    opening_door = opening_door + 1
+    print('We are opening the door number-%d' % (opening_door))
+    
+    # Determining switching door
+    options = [1,2,3]
+    options.remove(choice)
+    options.remove(opening_door)
+    switching_door = options[0]
+    
+    # Asking for switching the option
+    print('Now, do you want to switch to door number-%d? (yes/no)' %(switching_door))
+    answer = input()
+    if answer == 'yes':
+        result = switching_door - 1
+    else:
+        result = choice - 1
+    
+    # Displaying the player's prize 
+    print('And your prize is ....', prizes[result].upper())
+    
+# Reading initial choice
+choice = int(input('Which door do you want to choose? (1,2,3): '))
+
+# Playing game
+play_monty_hall(choice)
+
+
+
+
+------------------------burglary---------------------------
+from pgmpy.models import BayesianNetwork
+from pgmpy.inference import VariableElimination
+# Defining network structure
+alarm_model = BayesianNetwork(
+    [
+        ("Burglary", "Alarm"),
+        ("Earthquake", "Alarm"),
+        ("Alarm", "JohnCalls"),
+        ("Alarm", "MaryCalls"),
+    ]
+)
+# Defining the parameters using CPT
+from pgmpy.factors.discrete import TabularCPD
+
+cpd_burglary = TabularCPD(
+    variable="Burglary", variable_card=2, values=[[0.999], [0.001]]
+)
+cpd_earthquake = TabularCPD(
+    variable="Earthquake", variable_card=2, values=[[0.998], [0.002]]
+)
+cpd_alarm = TabularCPD(
+    variable="Alarm",
+    variable_card=2,
+    values=[[0.999, 0.71, 0.06, 0.05], [0.001, 0.29, 0.94, 0.95]],
+    evidence=["Burglary", "Earthquake"],
+    evidence_card=[2, 2],
+)
+cpd_johncalls = TabularCPD(
+    variable="JohnCalls",
+    variable_card=2,
+    values=[[0.95, 0.1], [0.05, 0.9]],
+    evidence=["Alarm"],
+    evidence_card=[2],
+)
+cpd_marycalls = TabularCPD(
+    variable="MaryCalls",
+    variable_card=2,
+    values=[[0.1, 0.7], [0.9, 0.3]],
+    evidence=["Alarm"],
+    evidence_card=[2],
+)
+# Associating the parameters with the model structure
+alarm_model.add_cpds(
+    cpd_burglary, cpd_earthquake, cpd_alarm, cpd_johncalls, cpd_marycalls
+)
+# Checking if the cpds are valid for the model
+alarm_model.check_model()
+# Viewing nodes of the model
+alarm_model.nodes()
+# Viewing edges of the model
+alarm_model.edges()
+# Checking independcies of a node
+alarm_model.local_independencies("Burglary")
+# Listing all Independencies
+alarm_model.get_independencies()
+
+
+
+
+
+---------------------------qlearning---------------------------
+import numpy as np 
+import pylab as pl 
+import networkx as nx 
+#Step 2: Define and visualize the graph
+edges = [(0, 1),(1, 5),(5, 6),(5, 4),(1, 2),  
+         (1, 3),(9, 10),(2, 4),(0, 6),(6, 7), 
+         (8, 9),(7, 8),(1, 7),(3, 9)]  
+goal = 10
+G = nx.Graph() 
+G.add_edges_from(edges) 
+pos = nx.spring_layout(G) 
+nx.draw_networkx_nodes(G, pos) 
+nx.draw_networkx_edges(G, pos) 
+nx.draw_networkx_labels(G, pos) 
+pl.show() 
+#Step 3: Define the system reward for the bot
+MATRIX_SIZE = 11
+M = np.matrix(np.ones(shape =(MATRIX_SIZE, MATRIX_SIZE))) 
+M *= -1  
+for point in edges: 
+    print(point) 
+    if point[1] == goal: 
+        M[point] = 100
+    else: 
+        M[point] = 0
+    if point[0] == goal: 
+        M[point[::-1]] = 100
+    else: 
+        M[point[::-1]]= 0 
+M[goal, goal]= 100
+print(M) 
+#Step 4: Defining some utility functions to be used in the training
+Q = np.matrix(np.zeros([MATRIX_SIZE, MATRIX_SIZE]))  
+gamma = 0.75
+initial_state = 1
+def available_actions(state): 
+    current_state_row = M[state, ] 
+    available_action = np.where(current_state_row >= 0)[1] 
+    return available_action  
+available_action = available_actions(initial_state)  
+def sample_next_action(available_actions_range): 
+    next_action = int(np.random.choice(available_action, 1)) 
+    return next_action   
+action = sample_next_action(available_action)   
+def update(current_state, action, gamma):  
+  max_index = np.where(Q[action, ] == np.max(Q[action, ]))[1] 
+  if max_index.shape[0] > 1: 
+      max_index = int(np.random.choice(max_index, size = 1)) 
+  else: 
+      max_index = int(max_index) 
+  max_value = Q[action, max_index] 
+  Q[current_state, action] = M[current_state, action] + gamma * max_value 
+  if (np.max(Q) > 0): 
+    return(np.sum(Q / np.max(Q)*100)) 
+  else: 
+    return (0) 
+update(initial_state, action, gamma) 
+#Step 5: Training and evaluating the bot using Q-Matrix
+scores = [] 
+for i in range(1000): 
+    current_state = np.random.randint(0, int(Q.shape[0])) 
+    available_action = available_actions(current_state) 
+    action = sample_next_action(available_action) 
+    score = update(current_state, action, gamma) 
+    scores.append(score)   
+current_state = 0
+steps = [current_state] 
+while current_state != 10: 
+    next_step_index = np.where(Q[current_state, ] == np.max(Q[current_state, ]))[1] 
+    if next_step_index.shape[0] > 1: 
+        next_step_index = int(np.random.choice(next_step_index, size = 1)) 
+    else: 
+        next_step_index = int(next_step_index) 
+    steps.append(next_step_index) 
+    current_state = next_step_index 
+print("Most efficient path:") 
+print(steps) 
+pl.plot(scores) 
+pl.xlabel('No of iterations') 
+pl.ylabel('Reward gained') 
+pl.show()
